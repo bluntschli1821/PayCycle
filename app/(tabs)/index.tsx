@@ -1,4 +1,4 @@
-import "@/globals.css";
+//import "@/globals.css";
 import { Link } from "expo-router";
 import { Text, View } from "react-native";
 import { SafeAreaView as MYSafeAreaView } from "react-native-safe-area-context";

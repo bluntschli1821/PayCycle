@@ -5,7 +5,7 @@ import { styled } from "nativewind";
 
 const SafeAreaView = styled(MYSafeAreaView);
 
-const subscriptions = () => {
+const Subscriptions = () => {
   return (
     <SafeAreaView className="flex-1 p-5 bg-background">
       <Text className="text-xl font-bold text-success">Subscriptions</Text>
@@ -13,4 +13,4 @@ const subscriptions = () => {
   );
 };
 
-export default subscriptions;
+export default Subscriptions;
