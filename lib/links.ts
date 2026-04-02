@@ -1,6 +1,18 @@
 import { Alert, Linking, Platform } from "react-native";
 
 /**
+ * Normalize phone number for tel: and sms: URLs
+ * Keeps only digits and a single leading '+' for E.164 format
+ * @param phoneNumber - Phone number to normalize
+ * @returns Normalized phone number (e.g., "+15551234567" or "15551234567")
+ */
+const normalizePhoneNumber = (phoneNumber: string) =>
+  phoneNumber
+    .trim()
+    .replace(/[^\d+]/g, "")
+    .replace(/(?!^)\+/g, "");
+
+/**
  * Opens a URL in the default browser or app
  * Safe for both web and native environments
  * @param url - The URL to open
@@ -65,20 +77,26 @@ export const sendEmail = async (
 
 /**
  * Open phone dialer
- * @param phoneNumber - Phone number to call
+ * @param phoneNumber - Phone number to call (can include +, spaces, dashes, etc.)
+ * @example
+ * callPhone("+1 (555) 123-4567") // Dials +15551234567
+ * callPhone("15551234567") // Dials 15551234567
  */
 export const callPhone = async (phoneNumber: string) => {
-  const telUrl = `tel:${phoneNumber.replace(/\D/g, "")}`;
+  const telUrl = `tel:${normalizePhoneNumber(phoneNumber)}`;
   await openURL(telUrl, "Cannot open phone dialer");
 };
 
 /**
  * Open SMS/messaging app
- * @param phoneNumber - Phone number to text
+ * @param phoneNumber - Phone number to text (can include +, spaces, dashes, etc.)
  * @param message - Optional message text
+ * @example
+ * sendSMS("+1 (555) 123-4567", "Hello!")  // Texts +15551234567 with "Hello!"
+ * sendSMS("15551234567")  // Opens SMS to 15551234567
  */
 export const sendSMS = async (phoneNumber: string, message?: string) => {
-  const smsUrl = `sms:${phoneNumber.replace(/\D/g, "")}${
+  const smsUrl = `sms:${normalizePhoneNumber(phoneNumber)}${
     message ? `?body=${encodeURIComponent(message)}` : ""
   }`;
 
