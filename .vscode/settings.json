@@ -3,5 +3,33 @@
     "source.fixAll": "explicit",
     "source.organizeImports": "explicit",
     "source.sortMembers": "explicit"
+  },
+  "editor.tokenColorCustomizations": {
+    "textMateRules": [
+      {
+        "scope": "keyword.other.dotenv",
+        "settings": {
+          "foreground": "#FF000000"
+        }
+      },
+      {
+        "scope": "keyword.control.bg3txt",
+        "settings": {
+          "foreground": "#C586C0"
+        }
+      },
+      {
+        "scope": "keyword.operator.bg3txt",
+        "settings": {
+          "foreground": "#ffa200"
+        }
+      },
+      {
+        "scope": "string.first-column.bg3txt",
+        "settings": {
+          "foreground": "#9CDCFE"
+        }
+      }
+    ]
   }
 }
