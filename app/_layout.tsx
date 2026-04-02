@@ -3,6 +3,8 @@ import "@/globals.css";
 import { SplashScreen, Stack } from "expo-router";
 import { useFonts } from "expo-font";
 
+SplashScreen.preventAutoHideAsync(); // Prevent the splash screen from auto-hiding
+
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
     "sans-regular": require("../assets/fonts/PlusJakartaSans-Regular.ttf"),
