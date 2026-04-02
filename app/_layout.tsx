@@ -31,13 +31,10 @@ export default function RootLayout() {
       console.log("Loading fonts...");
     }
   }, [fontsLoaded]);
-  if (!fontsLoaded) {
-    return null;
-  }
 
   return (
     <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
-      <Stack screenOptions={{ headerShown: false }} />
+      {fontsLoaded ? <Stack screenOptions={{ headerShown: false }} /> : null}
     </ClerkProvider>
   );
 }
