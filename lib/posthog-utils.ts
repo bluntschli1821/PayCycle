@@ -3,7 +3,7 @@
  * Use these functions to track events from non-React contexts (validators, utilities, etc)
  */
 
-import { posthog } from "@/src/config/posthog";
+import {posthog} from "@/src/config/posthog";
 
 /**
  * Capture an event from anywhere in the app (not just React components)
@@ -11,12 +11,12 @@ import { posthog } from "@/src/config/posthog";
  * @param properties - Optional event properties
  */
 export const captureEvent = (
-  eventName: string,
-  properties?: Record<string, any>,
+    eventName: string,
+    properties?: Record<string, any>,
 ) => {
-  if (posthog) {
-    posthog.capture(eventName, properties);
-  }
+    if (posthog) {
+        posthog.capture(eventName, properties);
+    }
 };
 
 /**
@@ -25,12 +25,12 @@ export const captureEvent = (
  * @param properties - Optional user properties
  */
 export const identifyUser = (
-  distinctId: string,
-  properties?: Record<string, any>,
+    distinctId: string,
+    properties?: Record<string, any>,
 ) => {
-  if (posthog) {
-    posthog.identify(distinctId, properties);
-  }
+    if (posthog) {
+        posthog.identify(distinctId, properties);
+    }
 };
 
 /**
@@ -39,12 +39,12 @@ export const identifyUser = (
  * @param properties - Optional screen properties
  */
 export const trackScreen = (
-  screenName: string,
-  properties?: Record<string, any>,
+    screenName: string,
+    properties?: Record<string, any>,
 ) => {
-  if (posthog) {
-    posthog.screen(screenName, properties);
-  }
+    if (posthog) {
+        posthog.screen(screenName, properties);
+    }
 };
 
 /**
@@ -52,34 +52,34 @@ export const trackScreen = (
  * @param properties - Properties to register
  */
 export const registerProperties = (properties: Record<string, any>) => {
-  if (posthog) {
-    posthog.register(properties);
-  }
+    if (posthog) {
+        posthog.register(properties);
+    }
 };
 
 /**
  * Clear user data (call on logout)
  */
 export const resetAnalytics = () => {
-  if (posthog) {
-    posthog.reset();
-  }
+    if (posthog) {
+        posthog.reset();
+    }
 };
 
 /**
  * Get the current distinct ID
  */
 export const getDistinctId = () => {
-  return (posthog as any)?.distinctId;
+    return (posthog as any)?.distinctId;
 };
 
 /**
  * Flush pending events immediately
  */
 export const flushEvents = async () => {
-  if (posthog) {
-    await posthog.flush();
-  }
+    if (posthog) {
+        await posthog.flush();
+    }
 };
 
 /**
@@ -87,17 +87,19 @@ export const flushEvents = async () => {
  * Usage: const isValid = validateEmailAndTrack('user@example.com')
  */
 export const validateEmailAndTrack = (email: string) => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  const isValid = emailRegex.test(email);
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const isValid = emailRegex.test(email);
 
-  if (!isValid) {
-    captureEvent("email_validation_failed", {
-      email,
-      error: "Invalid email format",
-    });
-  }
+    if (!isValid) {
+        captureEvent("email_validation_failed", {
+            // email,
+            // Avoid logging PII - only track that validation failed
+            email_domain: email.includes("@") ? email.split("@")[1] : undefined,
+            error: "Invalid email format",
+        });
+    }
 
-  return isValid;
+    return isValid;
 };
 
 /**
@@ -105,8 +107,8 @@ export const validateEmailAndTrack = (email: string) => {
  * Usage: trackDataProcessing('subscription_import', { count: 5 })
  */
 export const trackDataProcessing = (
-  processName: string,
-  properties?: Record<string, any>,
+    processName: string,
+    properties?: Record<string, any>,
 ) => {
-  captureEvent(`data_processing_${processName}`, properties);
+    captureEvent(`data_processing_${processName}`, properties);
 };
