@@ -8,10 +8,8 @@ const SafeAreaView = styled(MYSafeAreaView);
 export default function App() {
   return (
     <SafeAreaView className="flex-1 p-5 bg-background">
-      <Text className="text-xl font-bold text-success">
-        Welcome to Nativewind!
-      </Text>
-      <Link href="/subscriptions">View Subscriptions</Link>
+      <Text className="text-7xl font-sans-extrabold ">Home</Text>
+      <Text className="text-7xl font-bold ">Welcome to Nativewind!</Text>
     </SafeAreaView>
   );
 }
