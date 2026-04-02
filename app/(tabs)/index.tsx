@@ -5,12 +5,11 @@ import UpcomingSubscriptionCard from "@/components/UpcomingSubscriptionCard";
 import {
   HOME_BALANCE,
   HOME_SUBSCRIPTIONS,
-  HOME_USER,
   UPCOMING_SUBSCRIPTIONS,
 } from "@/constants/data";
 import { icons } from "@/constants/icons";
-import images from "@/constants/images";
 import { formatCurrency } from "@/lib/utils";
+import { useAuth, useUser } from "@clerk/expo";
 import dayjs from "dayjs";
 import { styled } from "nativewind";
 import { useState } from "react";
@@ -19,9 +18,47 @@ import { SafeAreaView as MYSafeAreaView } from "react-native-safe-area-context";
 
 const SafeAreaView = styled(MYSafeAreaView);
 export default function App() {
+  const { user } = useUser();
+  useAuth();
   const [expandedSubscriptionId, setExpandedSubscriptionId] = useState<
     string | null
   >(null);
+
+  // Build user name from Clerk data with fallback logic
+  const getUserDisplayName = () => {
+    if (!user) return "User";
+
+    // Priority 1: Full name (firstName + lastName if available)
+    if (user.firstName || user.lastName) {
+      const parts = [user.lastName].filter(Boolean);
+      if (parts.length > 0) {
+        return parts.join(" ");
+      }
+    }
+
+    // Priority 2: Username
+    if (user.username) {
+      return user.username;
+    }
+
+    // Priority 3: Email
+    if (user.emailAddresses && user.emailAddresses.length > 0) {
+      return user.emailAddresses[0].emailAddress;
+    }
+
+    return "User";
+  };
+
+  // Get user avatar from Clerk
+  const getUserAvatar = () => {
+    if (user?.imageUrl) {
+      return { uri: user.imageUrl };
+    }
+    return null;
+  };
+
+  const userDisplayName = getUserDisplayName();
+  const userAvatarSource = getUserAvatar();
 
   return (
     <SafeAreaView className="flex-1 p-5 bg-background">
@@ -30,8 +67,16 @@ export default function App() {
           <>
             <View className="home-header">
               <View className="home-user">
-                <Image source={images.avatar} className="home-avatar" />
-                <Text className="home-user-name">{HOME_USER.name}</Text>
+                {userAvatarSource ? (
+                  <Image source={userAvatarSource} className="home-avatar" />
+                ) : (
+                  <View className="home-avatar bg-slate-200 items-center justify-center">
+                    <Text className=" font-sans-light">
+                      {userDisplayName.charAt(0).toUpperCase()}
+                    </Text>
+                  </View>
+                )}
+                <Text className="home-user-name">{userDisplayName}</Text>
               </View>
 
               <Image source={icons.add} className="home-add-icon" />

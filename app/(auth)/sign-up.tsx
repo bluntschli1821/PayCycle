@@ -1,21 +1,23 @@
-import {
-  calculatePasswordStrength,
-  MIN_PASSWORD_LEN,
-} from "@/lib/passwordStrength";
-import { useSignIn } from "@clerk/expo";
+import { useAuth, useSignUp } from "@clerk/expo";
 import { Ionicons } from "@expo/vector-icons";
 import { type Href, Link, useRouter } from "expo-router";
 import React from "react";
 import {
-  ActivityIndicator,
-  Modal,
-  Pressable,
-  ScrollView,
-  Text,
-  TextInput,
-  View,
+    ActivityIndicator,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    Pressable,
+    ScrollView,
+    Text,
+    TextInput,
+    View,
 } from "react-native";
 import PayCycleLogo from "../../components/PayCycleLogo";
+import {
+    calculatePasswordStrength,
+    MIN_PASSWORD_LEN,
+} from "../../lib/passwordStrength";
 
 // Helper function to extract user-friendly error messages from Clerk
 const extractClerkErrorMessage = (error: any): string => {
@@ -28,12 +30,17 @@ const extractClerkErrorMessage = (error: any): string => {
       const clerkError = error.errors[0];
 
       // Handle specific error types
-      if (clerkError.message?.includes("credentials")) {
-        return "Invalid email or password. Please try again.";
+      if (clerkError.message?.includes("breached")) {
+        return "This password has been found in a data breach. Please choose a stronger, unique password.";
+      } else if (
+        clerkError.message?.includes("too weak") ||
+        clerkError.message?.includes("weak password")
+      ) {
+        return "Password is too weak. Please use at least 8 characters with a mix of uppercase, lowercase, and numbers.";
       } else if (clerkError.message?.includes("password")) {
-        return "Password does not meet security requirements. Please try a different password.";
-      } else if (clerkError.message?.includes("breached")) {
-        return "This password has been found in a data breach. Please choose a different password.";
+        return (
+          clerkError.message || "Password does not meet security requirements."
+        );
       } else if (clerkError.code === "form_password_pwned") {
         return "This password has appeared in previous data breaches. Please choose a different password.";
       } else if (clerkError.message) {
@@ -46,14 +53,14 @@ const extractClerkErrorMessage = (error: any): string => {
   }
 };
 
-export default function SignInPage() {
-  const { signIn, fetchStatus } = useSignIn();
+export default function SignUpPage() {
+  const { signUp, fetchStatus } = useSignUp();
+  const { isSignedIn } = useAuth();
   const router = useRouter();
 
   const [emailAddress, setEmailAddress] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [code, setCode] = React.useState("");
-  const [isVerifying, setIsVerifying] = React.useState(false);
   const [showPassword, setShowPassword] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState<string>("");
   const [showWeakPasswordWarning, setShowWeakPasswordWarning] =
@@ -63,20 +70,22 @@ export default function SignInPage() {
 
   const passwordStrength = calculatePasswordStrength(password);
 
-  // Debug: Log sign-in status changes
+  // Debug: Log sign-up status changes
   React.useEffect(() => {
-    console.log("Sign-in status changed:", {
-      status: signIn?.status,
-      supportedFactorCount: signIn?.supportedSecondFactors?.length || 0,
+    console.log("Sign-up status changed:", {
+      status: signUp?.status,
+      unverifiedFields: signUp?.unverifiedFields,
+      missingFields: signUp?.missingFields,
+      createdUserId: (signUp as any)?.createdUserId,
     });
-  }, [signIn]);
+  }, [signUp]);
 
-  const handleSubmitWithPassword = async () => {
+  const handleSubmitWithWeakPassword = async () => {
     setErrorMessage("");
 
     try {
-      console.log("Attempting sign-in with email:", emailAddress);
-      const { error } = await signIn.password({
+      console.log("Starting sign-up with email:", emailAddress);
+      const { error } = await signUp.password({
         emailAddress,
         password,
       });
@@ -84,40 +93,28 @@ export default function SignInPage() {
       if (error) {
         const errorMsg = extractClerkErrorMessage(error);
         setErrorMessage(errorMsg);
-        console.error("Sign-in error:", JSON.stringify(error, null, 2));
+        console.error("Sign-up error:", JSON.stringify(error, null, 2));
         return;
       }
 
-      console.log("Sign-in result:", {
-        status: signIn.status,
-      });
+      console.log("Account creation successful, status:", signUp.status);
+      console.log("Unverified fields:", signUp.unverifiedFields);
 
-      // Handle different sign-in statuses
-      if (signIn.status === "complete") {
-        console.log("Sign-in complete, finalizing");
-        await signIn.finalize();
-        router.replace("/(tabs)" as Href);
-      } else if (signIn.status === "needs_second_factor") {
-        console.log("MFA required");
-        setIsVerifying(true);
-      } else if (signIn.status === "needs_client_trust") {
-        console.log("Client trust needed, sending email code");
-        const emailCodeFactor = signIn.supportedSecondFactors.find(
-          (factor) => factor.strategy === "email_code",
+      // If password call succeeded, proceed to send email verification code
+      console.log("Sending email verification code...");
+      try {
+        await signUp.verifications.sendEmailCode();
+        console.log("Email code sent successfully");
+      } catch (emailErr) {
+        console.error(
+          "Failed to send email code:",
+          JSON.stringify(emailErr, null, 2),
         );
-
-        if (emailCodeFactor) {
-          await signIn.mfa.sendEmailCode();
-          setIsVerifying(true);
-        }
-      } else {
-        console.error("Unexpected sign-in status:", signIn.status);
-        setErrorMessage(
-          "Sign-in failed. Account may not have been created yet. Please create an account first.",
-        );
+        setErrorMessage("Failed to send verification code. Please try again.");
+        return;
       }
-    } catch (error) {
-      console.error("Sign-in error:", JSON.stringify(error, null, 2));
+    } catch (err) {
+      console.error("Sign-up error:", JSON.stringify(err, null, 2));
       setErrorMessage("An unexpected error occurred. Please try again.");
     }
   };
@@ -135,41 +132,98 @@ export default function SignInPage() {
       return;
     }
 
-    await handleSubmitWithPassword();
+    await handleSubmitWithWeakPassword();
   };
 
   const handleVerify = async () => {
     setErrorMessage("");
 
     try {
-      await signIn.mfa.verifyEmailCode({ code });
+      console.log("Verifying email code:", {
+        signUpStatus: signUp.status,
+        unverifiedFields: signUp.unverifiedFields,
+      });
 
-      if (signIn.status === "complete") {
-        await signIn.finalize();
-        router.replace("/(tabs)" as Href);
+      const verifyResult = await signUp.verifications.verifyEmailCode({
+        code,
+      });
+
+      console.log("Email verification returned:", {
+        verification: verifyResult,
+        signUpStatusAfter: signUp.status,
+        unverifiedFieldsAfter: signUp.unverifiedFields,
+      });
+
+      // Check if verification actually succeeded
+      if (!verifyResult || verifyResult.error) {
+        console.error("Verification failed:", verifyResult?.error);
+        setErrorMessage("Invalid verification code. Please try again.");
+        return;
+      }
+
+      // Wait a moment for state to update, then check status
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      console.log("After delay, current signUp status:", {
+        status: signUp.status,
+        unverifiedFields: signUp.unverifiedFields,
+      });
+
+      // Only finalize if sign-up is actually complete
+      if (signUp.status === "complete") {
+        console.log("Sign-up complete, finalizing");
+        try {
+          await signUp.finalize();
+          console.log("Sign-up finalized, redirecting to home");
+          router.replace("/(tabs)" as Href);
+        } catch (finalizeError) {
+          console.error(
+            "Finalize error:",
+            JSON.stringify(finalizeError, null, 2),
+          );
+          setErrorMessage("Sign-up completion failed. Please try again.");
+        }
       } else {
-        console.error("Sign-in attempt not complete:", signIn);
-        setErrorMessage("Verification failed. Please try again.");
+        console.error("Sign-up not complete. Status:", signUp.status);
+        console.error("Unverified fields:", signUp.unverifiedFields);
+        console.error("Missing fields:", signUp.missingFields);
+        setErrorMessage(
+          "Email verification processed, but sign-up is incomplete. Please check your information and try again.",
+        );
       }
     } catch (error) {
       console.error("Verification error:", JSON.stringify(error, null, 2));
-      setErrorMessage("Invalid verification code. Please try again.");
+      setErrorMessage(
+        "An error occurred during verification. Please try again.",
+      );
     }
   };
 
-  if (isVerifying && signIn.status === "needs_client_trust") {
+  if (signUp.status === "complete" || isSignedIn) {
+    return null;
+  }
+
+  // Show verification screen if email needs to be verified
+  if (signUp.unverifiedFields.includes("email_address")) {
     return (
-      <View className="flex-1 bg-yellow-50">
-        <ScrollView contentContainerClassName="flex-grow justify-center px-5 py-10">
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        className="flex-1"
+      >
+        <ScrollView
+          contentContainerClassName="flex-grow justify-center px-5 py-10"
+          className="flex-1 bg-yellow-50"
+        >
           <View className="gap-8">
             {/* Header Section */}
             <View className="gap-3 items-center">
               <PayCycleLogo size="medium" showText={false} />
               <Text className="text-2xl font-bold text-center text-slate-900">
-                Verify Your Account
+                Verify Your Email
               </Text>
               <Text className="text-sm text-slate-600 text-center">
-                We&apos;ve sent a verification code to your email
+                We&apos;ve sent a verification code to{"\n"}
+                <Text className="font-semibold">{emailAddress}</Text>
               </Text>
             </View>
 
@@ -214,51 +268,45 @@ export default function SignInPage() {
                   <ActivityIndicator color="#fff" />
                 ) : (
                   <Text className="text-white font-semibold text-base">
-                    Verify
+                    Verify Email
                   </Text>
                 )}
               </Pressable>
 
               <Pressable
                 className="rounded-xl items-center py-3 px-6 active:opacity-70"
-                onPress={() => signIn.mfa.sendEmailCode()}
+                onPress={() => signUp.verifications.sendEmailCode()}
               >
                 <Text className="text-orange-500 font-semibold text-sm">
                   Resend code
                 </Text>
               </Pressable>
-
-              <Pressable
-                className="rounded-xl items-center py-3 px-6 active:opacity-70"
-                onPress={() => {
-                  setIsVerifying(false);
-                  setCode("");
-                }}
-              >
-                <Text className="text-slate-600 font-semibold text-sm">
-                  Back to sign in
-                </Text>
-              </Pressable>
             </View>
           </View>
         </ScrollView>
-      </View>
+      </KeyboardAvoidingView>
     );
   }
 
   return (
-    <View className="flex-1 bg-yellow-50">
-      <ScrollView contentContainerClassName="flex-grow justify-center px-5 py-10">
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      className="flex-1"
+    >
+      <ScrollView
+        contentContainerClassName="flex-grow justify-center px-5 py-10"
+        className="flex-1 bg-yellow-50"
+      >
         <View className="gap-8">
           {/* Header Section with Logo */}
           <View className="gap-4 items-center">
             <PayCycleLogo size="medium" />
             <View className="gap-2 items-center">
               <Text className="text-2xl font-bold text-center text-slate-900">
-                Welcome back
+                Create an account
               </Text>
               <Text className="text-sm text-center text-slate-600">
-                Sign in to continue managing your subscriptions
+                Join PayCycle to start managing your subscriptions
               </Text>
             </View>
           </View>
@@ -293,7 +341,7 @@ export default function SignInPage() {
               />
             </View>
 
-            {/* Password Field with Toggle */}
+            {/* Password Field with Strength Indicator */}
             <View className="gap-2">
               <Text className="text-base font-semibold text-slate-900">
                 Password
@@ -374,9 +422,13 @@ export default function SignInPage() {
                   ))}
                 </View>
               )}
+
+              <Text className="text-xs text-slate-500">
+                Minimum {MIN_PASSWORD_LEN} characters required
+              </Text>
             </View>
 
-            {/* Sign In Button */}
+            {/* Sign Up Button */}
             <Pressable
               className={`rounded-xl items-center py-4 px-6 ${
                 !emailAddress ||
@@ -397,18 +449,16 @@ export default function SignInPage() {
                 <ActivityIndicator color="#fff" />
               ) : (
                 <Text className="text-white font-semibold text-lg">
-                  Sign in
+                  Create Account
                 </Text>
               )}
             </Pressable>
 
-            {/* Sign Up Link */}
+            {/* Sign In Link */}
             <View className="flex-row gap-1 justify-center items-center">
-              <Text className="text-slate-700">New to PayCycle? </Text>
-              <Link href="/sign-up">
-                <Text className="text-orange-500 font-semibold">
-                  Create an account
-                </Text>
+              <Text className="text-slate-700">Already have an account? </Text>
+              <Link href="/sign-in">
+                <Text className="text-orange-500 font-semibold">Sign in</Text>
               </Link>
             </View>
           </View>
@@ -489,7 +539,7 @@ export default function SignInPage() {
                   setProceedWithWeakPassword(true);
                   setShowWeakPasswordWarning(false);
                   // Retry submission with weak password accepted
-                  await handleSubmitWithPassword();
+                  await handleSubmitWithWeakPassword();
                 }}
               >
                 <Text className="text-white font-semibold text-base">
@@ -502,6 +552,6 @@ export default function SignInPage() {
       </Modal>
 
       <View nativeID="clerk-captcha" />
-    </View>
+    </KeyboardAvoidingView>
   );
 }
