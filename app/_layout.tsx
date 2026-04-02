@@ -3,14 +3,24 @@ import { ClerkProvider } from "@clerk/expo";
 import { tokenCache } from "@clerk/expo/token-cache";
 import { useFonts } from "expo-font";
 import { SplashScreen, Stack } from "expo-router";
+import { PostHogProvider } from "posthog-react-native";
 import React, { useEffect } from "react";
 
 SplashScreen.preventAutoHideAsync(); // Prevent the splash screen from auto-hiding
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
+const posthogApiKey = process.env.EXPO_PUBLIC_POSTHOG_API_KEY!;
+const posthogHost =
+  process.env.EXPO_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com";
 
 if (!publishableKey) {
   throw new Error("Add your Clerk Publishable Key to the .env file");
+}
+
+if (!posthogApiKey || posthogApiKey === "phc_YOUR_API_KEY_HERE") {
+  console.warn(
+    "PostHog API key not configured. Analytics will be disabled. Add EXPO_PUBLIC_POSTHOG_API_KEY to .env to enable.",
+  );
 }
 
 export default function RootLayout() {
@@ -34,7 +44,16 @@ export default function RootLayout() {
 
   return (
     <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
-      {fontsLoaded ? <Stack screenOptions={{ headerShown: false }} /> : null}
+      <PostHogProvider
+        apiKey={posthogApiKey === "phc_YOUR_API_KEY_HERE" ? "" : posthogApiKey}
+        options={{
+          host: posthogHost,
+          disabled: !posthogApiKey || posthogApiKey === "phc_YOUR_API_KEY_HERE",
+        }}
+        autocapture
+      >
+        {fontsLoaded ? <Stack screenOptions={{ headerShown: false }} /> : null}
+      </PostHogProvider>
     </ClerkProvider>
   );
 }

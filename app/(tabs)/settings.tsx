@@ -1,4 +1,5 @@
-import { useAuth } from "@clerk/expo";
+import { useAnalytics, useResetAnalytics } from "@/lib/analytics";
+import { useAuth, useUser } from "@clerk/expo";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { styled } from "nativewind";
@@ -10,13 +11,22 @@ const SafeAreaView = styled(MYSafeAreaView);
 
 const Settings = () => {
   const { signOut } = useAuth();
+  const { user } = useUser();
   const router = useRouter();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const resetAnalytics = useResetAnalytics();
+  const trackEvent = useAnalytics();
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
+      // Track logout event
+      trackEvent("user_signed_out", {
+        email: user?.emailAddresses?.[0]?.emailAddress || "unknown",
+      });
+
       await signOut();
+      resetAnalytics(); // Clear analytics data on logout
       router.replace("/sign-in");
     } catch (error) {
       console.error("Logout error:", error);

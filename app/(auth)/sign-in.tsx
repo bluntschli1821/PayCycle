@@ -1,3 +1,4 @@
+import { useAnalytics, useIdentifyUser } from "@/lib/analytics";
 import {
   calculatePasswordStrength,
   MIN_PASSWORD_LEN,
@@ -49,6 +50,8 @@ const extractClerkErrorMessage = (error: any): string => {
 export default function SignInPage() {
   const { signIn, fetchStatus } = useSignIn();
   const router = useRouter();
+  const trackEvent = useAnalytics();
+  const identifyUser = useIdentifyUser();
 
   const [emailAddress, setEmailAddress] = React.useState("");
   const [password, setPassword] = React.useState("");
@@ -85,6 +88,14 @@ export default function SignInPage() {
         const errorMsg = extractClerkErrorMessage(error);
         setErrorMessage(errorMsg);
         console.error("Sign-in error:", JSON.stringify(error, null, 2));
+
+        // Track sign-in failure
+        trackEvent("user_sign_in_failed", {
+          email: emailAddress,
+          error_message: errorMsg,
+          error_code: (error as any)?.errors?.[0]?.code || "unknown",
+        });
+
         return;
       }
 
@@ -95,6 +106,19 @@ export default function SignInPage() {
       // Handle different sign-in statuses
       if (signIn.status === "complete") {
         console.log("Sign-in complete, finalizing");
+
+        // Track successful login
+        trackEvent("user_logged_in", {
+          email: emailAddress,
+          mfaUsed: false,
+        });
+
+        // Identify user for future tracking
+        identifyUser(emailAddress, {
+          email: emailAddress,
+          last_login: new Date().toISOString(),
+        });
+
         await signIn.finalize();
         router.replace("/(tabs)" as Href);
       } else if (signIn.status === "needs_second_factor") {

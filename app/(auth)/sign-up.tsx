@@ -14,6 +14,7 @@ import {
     View,
 } from "react-native";
 import PayCycleLogo from "../../components/PayCycleLogo";
+import { useAnalytics, useIdentifyUser } from "../../lib/analytics";
 import {
     calculatePasswordStrength,
     MIN_PASSWORD_LEN,
@@ -57,6 +58,8 @@ export default function SignUpPage() {
   const { signUp, fetchStatus } = useSignUp();
   const { isSignedIn } = useAuth();
   const router = useRouter();
+  const trackEvent = useAnalytics();
+  const identifyUser = useIdentifyUser();
 
   const [emailAddress, setEmailAddress] = React.useState("");
   const [password, setPassword] = React.useState("");
@@ -94,6 +97,14 @@ export default function SignUpPage() {
         const errorMsg = extractClerkErrorMessage(error);
         setErrorMessage(errorMsg);
         console.error("Sign-up error:", JSON.stringify(error, null, 2));
+
+        // Track sign-up failure
+        trackEvent("user_sign_up_failed", {
+          email: emailAddress,
+          error_message: errorMsg,
+          error_code: (error as any)?.errors?.[0]?.code || "unknown",
+        });
+
         return;
       }
 
@@ -174,6 +185,19 @@ export default function SignUpPage() {
         console.log("Sign-up complete, finalizing");
         try {
           await signUp.finalize();
+
+          // Track successful signup
+          trackEvent("user_signed_up", {
+            email: emailAddress,
+            passwordStrength: passwordStrength.level,
+          });
+
+          // Identify user for future tracking
+          identifyUser(emailAddress, {
+            email: emailAddress,
+            signup_date: new Date().toISOString(),
+          });
+
           console.log("Sign-up finalized, redirecting to home");
           router.replace("/(tabs)" as Href);
         } catch (finalizeError) {
