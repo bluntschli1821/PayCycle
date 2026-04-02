@@ -112,3 +112,26 @@ export const trackDataProcessing = (
 ) => {
     captureEvent(`data_processing_${processName}`, properties);
 };
+
+
+/**
+ * Get the current distinct ID (async, future-proof)
+ */
+export const getDistinctIdAsync = async (): Promise<string | undefined> => {
+  try {
+    if (!posthog) return undefined;
+
+    // Prefer the official async API if present
+    const anyClient = posthog as any;
+    if (typeof anyClient.getDistinctId === "function") {
+      const id = await anyClient.getDistinctId();
+      return typeof id === "string" ? id : undefined;
+    }
+
+    // Fallback to property if SDK exposes it
+    const id = anyClient?.distinctId;
+    return typeof id === "string" ? id : undefined;
+  } catch (_) {
+    return undefined;
+  }
+};

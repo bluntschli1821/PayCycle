@@ -2,10 +2,12 @@ import Constants from "expo-constants";
 import PostHog from "posthog-react-native";
 
 
-const rawApiKey = Constants.expoConfig?.extra?.posthogProjectToken as
-    | string
-    | undefined;
-const rawHost = Constants.expoConfig?.extra?.posthogHost as string | undefined;
+const rawApiKey =
+    process.env.EXPO_PUBLIC_POSTHOG_API_KEY ??
+    (Constants.expoConfig?.extra?.posthogProjectToken as string | undefined);
+const rawHost =
+    process.env.EXPO_PUBLIC_POSTHOG_HOST ??
+    (Constants.expoConfig?.extra?.posthogHost as string | undefined);
 
 // Trim and normalize API key and host
 const apiKey = rawApiKey?.trim();
