@@ -1,0 +1,96 @@
+[
+  {
+    "event": "user_signed_up",
+    "description": "User completes email verification and account creation via Clerk",
+    "file": "app/(auth)/sign-up.tsx",
+    "properties": {
+      "email": "string",
+      "passwordStrength": "weak|fair|good|strong"
+    }
+  },
+  {
+    "event": "user_sign_up_failed",
+    "description": "User sign-up attempt failed with an error",
+    "file": "app/(auth)/sign-up.tsx",
+    "properties": {
+      "email": "string",
+      "error_message": "string",
+      "error_code": "string"
+    }
+  },
+  {
+    "event": "user_signed_in",
+    "description": "User successfully signs in with email and password via Clerk",
+    "file": "app/(auth)/sign-in.tsx",
+    "properties": {
+      "email": "string",
+      "mfaUsed": "boolean"
+    }
+  },
+  {
+    "event": "user_sign_in_failed",
+    "description": "User sign-in attempt failed with an error",
+    "file": "app/(auth)/sign-in.tsx",
+    "properties": {
+      "email": "string",
+      "error_message": "string",
+      "error_code": "string"
+    }
+  },
+  {
+    "event": "user_signed_out",
+    "description": "User signs out from the application",
+    "file": "app/(tabs)/settings.tsx",
+    "properties": {
+      "email": "string"
+    }
+  },
+  {
+    "event": "subscription_expanded",
+    "description": "User expands a subscription card to view details",
+    "file": "app/(tabs)/index.tsx",
+    "properties": {
+      "subscriptionId": "string",
+      "subscriptionName": "string"
+    }
+  },
+  {
+    "event": "subscription_collapsed",
+    "description": "User collapses an expanded subscription card",
+    "file": "app/(tabs)/index.tsx",
+    "properties": {
+      "subscriptionId": "string"
+    }
+  },
+  {
+    "event": "subscription_details_viewed",
+    "description": "User opens the subscription detail screen",
+    "file": "app/subscriptions/[id].tsx",
+    "properties": {
+      "subscriptionId": "string",
+      "subscriptionName": "string"
+    }
+  },
+  {
+    "event": "subscription_created",
+    "description": "User creates a new subscription",
+    "file": "components/CreateSubscriptionModal.tsx",
+    "properties": {
+      "subscriptionName": "string",
+      "price": "number",
+      "billingCycle": "string"
+    }
+  },
+  {
+    "event": "create_subscription_modal_opened",
+    "description": "User opens the create subscription modal",
+    "file": "app/(tabs)/index.tsx",
+    "properties": {}
+  },
+  {
+    "event": "create_subscription_modal_closed",
+    "description": "User closes the create subscription modal",
+    "file": "app/(tabs)/index.tsx",
+    "properties": {}
+  }
+]

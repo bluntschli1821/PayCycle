@@ -8,18 +8,9 @@ import {
   UPCOMING_SUBSCRIPTIONS,
 } from "@/constants/data";
 import { icons } from "@/constants/icons";
+import { useAnalytics } from "@/lib/analytics";
 import { formatCurrency } from "@/lib/utils";
 import { useAuth, useUser } from "@clerk/expo";
-import UpcomningSubscriptionCard from "@/components/UpcomningSubscriptionCard";
-import {
-  HOME_BALANCE,
-  HOME_SUBSCRIPTIONS,
-  HOME_USER,
-  UPCOMING_SUBSCRIPTIONS,
-} from "@/constants/data";
-import { icons } from "@/constants/icons";
-import images from "@/constants/images";
-import { formatCurrency } from "@/lib/utils";
 import dayjs from "dayjs";
 import { styled } from "nativewind";
 import { useState } from "react";
@@ -30,6 +21,7 @@ const SafeAreaView = styled(MYSafeAreaView);
 export default function App() {
   const { user } = useUser();
   useAuth();
+  const trackEvent = useAnalytics();
   const [expandedSubscriptionId, setExpandedSubscriptionId] = useState<
     string | null
   >(null);
@@ -129,11 +121,25 @@ export default function App() {
           <SubscriptionCard
             {...item}
             expanded={expandedSubscriptionId === item.id}
-            onPress={() =>
+            onPress={() => {
+              const isExpanding = expandedSubscriptionId !== item.id;
+
+              // Track expand/collapse event
+              if (isExpanding) {
+                trackEvent("subscription_expanded", {
+                  subscriptionId: item.id,
+                  subscriptionName: item.name,
+                });
+              } else {
+                trackEvent("subscription_collapsed", {
+                  subscriptionId: item.id,
+                });
+              }
+
               setExpandedSubscriptionId((currentId) =>
                 currentId === item.id ? null : item.id,
-              )
-            }
+              );
+            }}
           />
         )}
         extraData={expandedSubscriptionId}
